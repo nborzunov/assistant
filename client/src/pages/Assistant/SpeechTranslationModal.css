@@ -1,0 +1,65 @@
+.btn {
+  border: none;
+  padding: 0;
+  border-radius: 100%;
+  width: 100px;
+  height: 100px;
+  font-size: 3em;
+  color: #fff;
+  padding: 0;
+  margin: 0;
+  background: red;
+  position: relative;
+  z-index: 999;
+  display: inline-block;
+  line-height: 100px;
+  text-align: center;
+  white-space: nowrap;
+  vertical-align: middle;
+  -ms-touch-action: manipulation;
+  touch-action: manipulation;
+  cursor: pointer;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  background-image: none;
+}
+.pulse-ring {
+  content: "";
+  width: 100px;
+  height: 100px;
+  background: #189bff;
+  border: 5px solid #189bff;
+  border-radius: 50%;
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  animation: pulsate infinite 1.5s;
+}
+@-webkit-keyframes pulsate {
+  0% {
+    -webkit-transform: scale(1, 1);
+    opacity: 1;
+  }
+  100% {
+    -webkit-transform: scale(1.5, 1.5);
+    opacity: 0;
+  }
+}
+.container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background-color: #d8d8d8;
+}
+.m-left {
+  margin-left: 300px;
+}
+.type2 {
+  background: #189bff;
+}
+.type2 .pulse-ring {
+  background: transparent;
+}
