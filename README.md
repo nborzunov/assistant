@@ -1,4 +1,4 @@
-# Digital Assistent
+# Digital Assistant
 ## Реализованная функциональность
 
 ### Наш Цифровой помощник:
