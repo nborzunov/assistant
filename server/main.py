@@ -30,9 +30,6 @@ app.add_middleware(
 )
 
 
-
-
-
 def clean_string(string):
     # Normalize the string to remove any accents or diacritical marks
     normalized_string = unicodedata.normalize('NFKD', string)
@@ -43,7 +40,7 @@ def clean_string(string):
 
 def get_subject_phrase(doc):
     for token in doc:
-        if ("obj" in token.dep_):
+        if "obj" in token.dep_:
             subtree = list(token.subtree)
             start = subtree[0].i
             end = subtree[-1].i + 1
@@ -52,11 +49,12 @@ def get_subject_phrase(doc):
 
 def get_object_phrase(doc):
     for token in doc:
-        if ("dobj" in token.dep_):
+        if "dobj" in token.dep_:
             subtree = list(token.subtree)
             start = subtree[0].i
             end = subtree[-1].i + 1
             return doc[start:end]
+
 
 def get_hotwords(text):
     result = []
@@ -69,55 +67,103 @@ def get_hotwords(text):
             result.append(token.lemma_)
     return result
 
-soup = BeautifulSoup(data.faq, 'html.parser')
-questions = []
+
 
 def get_most_common(text: str):
     doc = nlp(text.lower())
-    normalized_text = " ".join([token.lemma_ for token in doc])
-    output = set(get_hotwords(normalized_text))
+    output = []
+    for token in doc:
+        if token.pos_ in ['NOUN', 'VERB', 'ADJ'] or token.dep_ in ['nsubj', 'dobj']:
+            output.append(token.lemma_)
     return [key[0] for key in Counter(output).most_common(10)]
 
-for question in soup.find_all('div', class_='question'):
-    heading = question.find('a', class_='question__header').text.strip()
-    text = ' '.join([p.text.strip() for p in question.find('div', class_='question__content').find_all('p')])
 
-    keywords = get_most_common(heading + ' ' + text)
+def is_question(doc):
+    has_question = False
+    for token in doc:
+        if token.text == '?' or token.text == '«?' or token.text == '?»':
+            has_question = True
+        elif token.dep_ == "aux" and token.head.pos_ == "VERB":
+            print('87')
+            has_question = True
+        elif token.dep_ == "auxpass" and token.head.pos_ == "VERB":
+            print('90')
+            has_question = True
+        elif token.dep_ == "nsubj" and token.head.pos_ == "AUX":
+            print('93')
+            has_question = True
+    if doc[-1].text == '?' or doc[0].lemma_ in ('кто', 'что', 'где', 'когда', 'почему', 'зачем', 'как'):
+        print('100')
+        has_question = True
+    if any(token.tag_ == 'INTJ' and token.text.lower() in ('ой', 'ай', 'увы', 'ага') for token in doc):
+        print('102')
+        has_question = True
+    if any(token.tag_ == 'VERB' and 'Mood=Imp' in token.morph for token in doc):
+        print('105')
+        has_question = True
+    return has_question
+
+# Приводим ответы из разных источников к единому виду, рассчитываем ключевые слова
+# В нормальном коде это конечно же будет в БД
+
+
+pattern = r"^\d+\.\s"
+soup = BeautifulSoup(data.faq, 'html.parser')
+questions = []
+for question in soup.find_all('div', class_='question'):
+    heading = re.sub(pattern, "", question.find('a', class_='question__header').text.strip(), flags=re.MULTILINE)
+    text = [ re.sub(pattern, "", p.text.strip(), flags=re.MULTILINE)for p in question.select("div[class*=question__content]")[0].find_all('p')]
+    keywords = get_most_common(heading + ' ' + " ".join(text))
     questions.append({'heading': heading, 'text': text, 'keywords': keywords})
 
+soup = BeautifulSoup(data.questions, 'html.parser')
+for question in soup.select("div[class*=accordion_item]"):
+    heading = re.sub(pattern, "", question.select("span[class*=accordion_title]")[0].text.strip(), flags=re.MULTILINE)
+    text = [ re.sub(pattern, "", p.text.strip(), flags=re.MULTILINE)for p in question.select("div[class*=accordion_answer]")[0].find_all('p')]
+    keywords = get_most_common(heading + ' ' + " ".join(text))
+    questions.append({'heading': heading, 'text': text, 'keywords': keywords})
 
+for question in data.support_questions:
+
+    keywords = get_most_common(question["heading"] + ' ' + question["text"][0])
+    questions.append({'heading': question["heading"], 'text': question["text"], 'keywords': keywords})
+
+
+for question in questions:
+    print(question['heading'])
 @app.post("/translate/")
 async def root(info: Request):
-    text = await info.json()
+    res = await info.json()
+    text = res['text']
+
     doc = nlp(text)
 
-    isQuestion = False
-    for token in doc:
-        print(token.text, token.dep_, token.head.text, token.head.pos_,
-              [child for child in token.children])
+    if is_question(doc) or res['isQuestion']:
+        request_keywords = []
+        for token in doc:
+            if token.pos_ in ['NOUN', 'VERB', 'ADJ'] or token.dep_ in ['nsubj', 'dobj']:
+                request_keywords.append(token.lemma_)
 
-        if token.head.pos_ == "CCONJ" or token.head.pos_ == 'ADV' or token.head.pos_ == 'PRON':
-            isQuestion = True
-
-    subject_phrase = get_subject_phrase(doc)
-    object_phrase = get_object_phrase(doc)
-    print(subject_phrase)
-    print(object_phrase)
-
-    output = set(get_hotwords(text))
-    request_keywords = [key[0] for key in Counter(output).most_common(10)]
-    print(request_keywords)
-
-    results = []
-    for i, obj in enumerate(questions):
-        intersection = set(obj['keywords']).intersection(set(request_keywords))
-        results.append((len(intersection), i))
-
-    results.sort(reverse=True)
-
-    most_proper_answer = questions[results[0][1]]
-    print(most_proper_answer)
+        most_proper_answer = None
+        max_score = 0
+        for obj in questions:
+            score = len(set(obj['keywords']) & set(request_keywords))
+            if score > max_score:
+                max_score = score
+                most_proper_answer = obj
+        if not most_proper_answer:
+            return {
+                "text": text,
+                "isQuestion": True,
+                "answerHeading": "Попробуйте сформулировать вопрос иначе",
+            }
+        return {
+            "text": text,
+            "isQuestion": True,
+            "answerHeading": most_proper_answer['heading'],
+            "answerText": most_proper_answer['text'],
+        }
     return {
         "text": text,
-        "isQuestion": isQuestion
+        "isQuestion": False
     }

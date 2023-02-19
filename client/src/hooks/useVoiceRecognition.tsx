@@ -1,7 +1,7 @@
 import { useState } from "react";
 
-// @ts-ignore
 const SpeechRecognition =
+  // @ts-ignore
   window.SpeechRecognition || window.webkitSpeechRecognition;
 
 export const useVoiceRecognition = (onFinish: (text: string) => void) => {

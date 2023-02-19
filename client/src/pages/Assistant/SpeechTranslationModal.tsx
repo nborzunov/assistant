@@ -21,7 +21,7 @@ export const SpeechTranslationModal = ({
 }: any) => {
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
-      <ModalOverlay />
+      <ModalOverlay zIndex={1000} />
       <ModalContent margin={"auto"} borderRadius={"32"}>
         <ModalBody>
           <Box my={6} mx={4}>

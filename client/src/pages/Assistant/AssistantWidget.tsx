@@ -15,20 +15,23 @@ import {
   Tooltip,
   useDisclosure,
   Image,
+  useOutsideClick,
+  Center,
 } from "@chakra-ui/react";
 import { SpeechTranslationModal } from "./SpeechTranslationModal";
-import React, { useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useVoiceRecognition } from "../../hooks/useVoiceRecognition";
 import { useAssistant } from "./useAssistant";
 import { Icons } from "../../assets/icons";
 import { useGrantsListAssistant } from "./useGrantsListAssistant";
 import assistant from "../../assets/assistant.png";
+import "./SpeechTranslationModal.css";
 
 const AssistantWidgetContent = ({ onCloseWidget }: any) => {
   const { transcript, recording, handleStopRecording, handleStartRecording } =
     useVoiceRecognition(handleFinishRecording);
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const { text, setText, sendMessage, messages } = useGrantsListAssistant();
+  const { text, setText, sendMessage, messages, container } = useGrantsListAssistant();
   const startRecording = () => {
     onOpen();
     handleStartRecording();
@@ -50,7 +53,7 @@ const AssistantWidgetContent = ({ onCloseWidget }: any) => {
         handleStopRecording={handleStopRecording}
       />
       <Flex flexDir={"column"} height={"90%"}>
-        <Heading fontSize={"lg"} mb={3} mt={0} color={"white"}>
+        <Heading fontSize={"md"} mb={3} mt={0} color={"white"}>
           Цифровой помощник
         </Heading>
         <CloseButton
@@ -67,19 +70,28 @@ const AssistantWidgetContent = ({ onCloseWidget }: any) => {
           height={"90%"}
           overflowY={"auto"}
           scrollSnapType={"y mandatory"}
+          w={"calc(100% + 16px)"}
           sx={{
             "&::-webkit-scrollbar": {
-              width: "12px",
-              borderRadius: "8px",
-              backgroundColor: `rgba(0, 0, 0, 0.05)`,
+              borderRadius: "3px",
+              width: "8px",
+              backgroundColor: `transparent`,
             },
             "&::-webkit-scrollbar-thumb": {
-              backgroundColor: `rgba(0, 0, 0, 0.15)`,
+              backgroundColor: `whiteAlpha.700`,
+              borderRadius: "3px",
+              border: "none",
             },
           }}
+          ref={container}
         >
           {messages.map((message, index) => (
-            <>
+            <Box
+              maxWidth={"80%"}
+              mr={"8px"}
+              width={"fit-content"}
+              alignSelf={message.type === "out" ? "start" : "end"}
+            >
               {message.noOutline ? (
                 <Box lineHeight={"22px"}>{message.content}</Box>
               ) : (
@@ -93,21 +105,18 @@ const AssistantWidgetContent = ({ onCloseWidget }: any) => {
                       ? "16px 16px 16px 4px"
                       : "16px 16px 4px 16px"
                   }
-                  alignSelf={message.type === "out" ? "start" : "end"}
-                  width={"fit-content"}
-                  maxWidth={"70%"}
                   fontWeight={"semibold"}
                   lineHeight={"22px"}
                 >
                   {message.content}
                 </Box>
               )}
-            </>
+            </Box>
           ))}
         </Flex>
       </Flex>
       <Box as={"form"} onSubmit={sendMessage}>
-        <InputGroup variant={"filled"} size="lg">
+        <InputGroup variant={"filled"} size="md">
           <Input
             placeholder="Введите вопрос.."
             colorScheme={"white"}
@@ -116,9 +125,9 @@ const AssistantWidgetContent = ({ onCloseWidget }: any) => {
             _focus={{
               backgroundColor: "whiteAlpha.900",
             }}
-            borderRadius={"2xl"}
             value={text}
             onChange={(e) => setText(e.target.value)}
+            borderRadius={"lg"}
           />
           {!text ? (
             <InputRightElement
@@ -129,6 +138,7 @@ const AssistantWidgetContent = ({ onCloseWidget }: any) => {
                   aria-label={"send"}
                   onClick={startRecording}
                   fontSize={"2xl"}
+                  borderRadius={"lg"}
                 />
               }
             />
@@ -141,6 +151,7 @@ const AssistantWidgetContent = ({ onCloseWidget }: any) => {
                   aria-label={"send"}
                   onClick={sendMessage}
                   fontSize={"xl"}
+                  borderRadius={"lg"}
                 />
               }
             />
@@ -152,47 +163,88 @@ const AssistantWidgetContent = ({ onCloseWidget }: any) => {
 };
 export const AssistantWidget = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const ref = useRef(null);
+  useOutsideClick({
+    handler: () => onClose(),
+    ref: ref,
+  });
+
+  const [hintOpened, setHintOpened] = useState(false);
+  useEffect(() => {
+    setTimeout(() => {
+      setHintOpened(true);
+    }, 5500);
+  }, []);
   return (
-    <Box position="fixed" bottom="12" right="12">
+    <>
       {!isOpen && (
-        <Tooltip label={"Открыть цифрового помощника"}>
-          <Fade in={!isOpen}>
-            <Button
-              bg={"transparent"}
-              transitionDuration={"0.2s"}
-              _hover={{
-                bg: "cyan.100",
-                opacity: 0.9,
-              }}
-              w={40}
-              h={40}
-              borderRadius={"50%"}
-              onClick={onOpen}
-            >
-              <Image src={assistant}></Image>
-            </Button>
-          </Fade>
-        </Tooltip>
-      )}
-      {isOpen && (
-        <SlideFade in={isOpen} offsetY="20px">
-          <Box
-            height={"560px"}
-            w={"320px"}
-            bg={"cyan.500"}
-            borderRadius={"24"}
-            py={3}
-            px={4}
-            position={"relative"}
-            zIndex={1000}
+        <Box position="fixed" bottom="12" right="24">
+          <Tooltip
+            whiteSpace="pre-wrap"
+            fontSize="lg"
+            placement="top-start"
+            borderRadius="xl"
+            boxShadow="xl"
+            width="260px"
+            label={"Привет, я Лёва!\nЗадай мне любой вопрос!"}
+            arrowSize={15}
+            bg={"brand.300"}
+            bgGradient={"linear(to-b, brand.400, brand.300)"}
+            p={4}
+            isOpen={hintOpened}
+            hasArrow
           >
-            <AssistantWidgetContent onCloseWidget={onClose} />
-          </Box>
-        </SlideFade>
-        // <ScaleFade initialScale={0.9} in={isOpen}>
-        //
-        // </ScaleFade>
+            <Center position={"relative"} w={"220px"} h={"220px"}>
+              <Box w={"160px"} h={"160px"} position={"relative"}>
+                <Box
+                  id="speech"
+                  className="btn type2"
+                  w={"160px"}
+                  h={"160px"}
+                  bg={"brand.200"}
+                  _hover={{
+                    bg: "brand.100",
+                    opacity: 0.7,
+                    transitionDuration: "all 300ms",
+                  }}
+                >
+                  <Image
+                    src={assistant}
+                    bg={"transparent"}
+                    transitionDuration={"0.2s"}
+                    w={40}
+                    h={40}
+                    borderRadius={"50%"}
+                    onClick={onOpen}
+                    cursor={"pointer"}
+                    boxShadow="xl"
+                  ></Image>
+                </Box>
+                <Box className={"pulse-ring"} w={"160px"} h={"160px"}></Box>
+              </Box>
+            </Center>
+          </Tooltip>
+        </Box>
       )}
-    </Box>
+
+      {isOpen && (
+        <Box
+          position="fixed"
+          bottom="12"
+          right="12"
+          height={"560px"}
+          w={"320px"}
+          bgGradient={"linear(to-b, brand.400, brand.300)"}
+          borderRadius={"24"}
+          py={3}
+          px={4}
+          zIndex={1000}
+          boxShadow="2xl"
+          ref={ref}
+        >
+          <AssistantWidgetContent onCloseWidget={onClose} />
+        </Box>
+      )}
+    </>
   );
 };

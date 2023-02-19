@@ -19,6 +19,7 @@ import { grants } from "../assets/mockData";
 import { Link, useParams } from "react-router-dom";
 import { AssistantWidget } from "./Assistant/AssistantWidget";
 import React from "react";
+import mockImage from "../assets/mockImage.jpg";
 
 export const GrantDetails = () => {
   const { grantId } = useParams();
@@ -37,11 +38,11 @@ export const GrantDetails = () => {
             <Image
               rounded={"md"}
               alt={"product image"}
-              src={grant.image}
+              src={mockImage}
               fit={"cover"}
               align={"center"}
               w={"100%"}
-              h={{ base: "100%", sm: "400px", lg: "500px" }}
+              h="100%"
             />
           </Flex>
           <Stack spacing={{ base: 6, md: 10 }}>
@@ -77,7 +78,7 @@ export const GrantDetails = () => {
               <Box>
                 <Text
                   fontSize={{ base: "16px", lg: "18px" }}
-                  color={useColorModeValue("yellow.500", "yellow.300")}
+                  color={"blue.500"}
                   fontWeight={"500"}
                   textTransform={"uppercase"}
                   mb={"4"}
@@ -122,16 +123,16 @@ export const GrantDetails = () => {
               mt={8}
               size={"lg"}
               py={"7"}
-              colorScheme={"blue"}
+              colorScheme={"brand"}
               textTransform={"uppercase"}
               _hover={{
-                transform: "translateY(2px)",
+                backgroundColor: "brand.600",
                 boxShadow: "lg",
-                position: "static !important",
+                position: "static",
               }}
               as={Link}
               to={`fill`}
-              position={"static !important"}
+              position={"static"}
               borderRadius={"1em"}
             >
               Подать заявку
